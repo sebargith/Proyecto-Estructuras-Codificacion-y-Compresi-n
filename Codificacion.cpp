@@ -69,7 +69,7 @@ string codificarHuffman(string texto, unordered_map<char, string>& codigos) {
 }
 
 int main() {
-    string texto = "abracadabra";
+    //string texto = "abracadabra";
     cout << "Ingrese texto: " << endl;
     getline(cin, texto);
 
