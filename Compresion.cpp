@@ -60,10 +60,9 @@ std::string DescompresionLZ(const std::vector<ParLZ>& comprimido) {
 }
 
 int main() {
-    SetConsoleOutputCP(CP_UTF8); // Carácteres en español
 
     // Leer el archivo entrada.txt
-    std::ifstream file("entradaprueba.txt");
+    std::ifstream file("entrada.txt");
     if (!file) {
         std::cerr << "No se pudo abrir el archivo entrada.txt\n";
         return 1;
@@ -85,6 +84,11 @@ int main() {
     std::cout << "Tiempo de Compresión LZ: " << TiempoCompresionLZ.count() << " s\n";
     std::cout << "Tiempo de Descompresión LZ: " << TiempoDescompresionLZ.count() << " s\n";
     std::cout << "Tamaño de Compresión LZ: " << ComprimidoLZ.size() * sizeof(ParLZ) * 8 << " bits\n";
+
+    // Escribir el resultado descomprimido en descomprimido.txt
+    std::ofstream output("descomprimido.txt");
+    output << DescomprimidoLZ;
+    output.close();
 
     return 0;
 }
