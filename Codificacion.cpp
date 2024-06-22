@@ -68,6 +68,28 @@ string codificarHuffman(string texto, unordered_map<char, string>& codigos) {
     return textoCodificado;
 }
 
+// Función para decodificar un string codificado usando el árbol de Huffman
+std::string decodificarHuffman(const std::string& stringCof, NodoHuffman* raiz) {
+    std::string stringDecof;
+    NodoHuffman* nodoActual = raiz;
+    
+    for (char bit : stringCof) {
+        if (bit == '0') {
+            nodoActual = nodoActual->izquierda;
+        } else {
+            nodoActual = nodoActual->derecha;
+        }
+        
+        // Si llegamos a un nodo hoja
+        if (nodoActual->izquierda == nullptr && nodoActual->derecha == nullptr) {
+            stringDecof += nodoActual->caracter;
+            nodoActual = raiz;
+        }
+    }
+    
+    return stringDecof;
+}
+
 int main() {
     string texto;
     cout << "Ingrese texto: " << endl;
