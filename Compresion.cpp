@@ -1,23 +1,19 @@
 #include <iostream>
 #include <fstream>
-#include <windows.h>
-#include <string>
 #include <vector>
+#include <string>
+#include <limits>
 #include <chrono>
-#include <algorithm> // Para std::max
+#include <algorithm>
 
 // Estructura para representar un par de LZ
 struct ParLZ {
-    int pos;
-    int lon;
+    uint16_t pos;
+    uint16_t lon;
     char sigchar;
 
-    ParLZ(int p, int l, char c) : pos(p), lon(l), sigchar(c) {}
+    ParLZ(uint16_t p, uint16_t l, char c) : pos(p), lon(l), sigchar(c) {}
 };
-
-// Declaración de funciones iniciales
-std::vector<ParLZ> CompresionLZ(const std::string& texto);
-std::string DescompresionLZ(const std::vector<ParLZ>& comprimido);
 
 // Función para comprimir el texto usando LZ
 std::vector<ParLZ> CompresionLZ(const std::string& texto) {
@@ -26,9 +22,9 @@ std::vector<ParLZ> CompresionLZ(const std::string& texto) {
     for (int i = 0; i < n;) {
         int maxLon = 0;
         int maxPos = 0;
-        for (int j = std::max(0, i - 255); j < i; ++j) {
+        for (int j = std::max(0, i - 8192); j < i; ++j) {
             int largo = 0;
-            while (i + largo < n && texto[j + largo] == texto[i + largo]) {
+            while (i + largo < n && texto[j + largo] == texto[i + largo] && largo < std::numeric_limits<uint16_t>::max()) {
                 largo++;
             }
             if (largo > maxLon) {
@@ -49,8 +45,9 @@ std::string DescompresionLZ(const std::vector<ParLZ>& comprimido) {
     for (const auto& par : comprimido) {
         if (par.lon > 0) {
             int pos = descomprimido.size() - par.pos;
-            if (pos < 0) pos = 0; // Asegurarse de que la posición no sea negativa
-            descomprimido += descomprimido.substr(pos, par.lon);
+            for (int i = 0; i < par.lon; ++i) {
+                descomprimido += descomprimido[pos + i];
+            }
         }
         if (par.sigchar != '\0') {
             descomprimido += par.sigchar;
@@ -59,36 +56,99 @@ std::string DescompresionLZ(const std::vector<ParLZ>& comprimido) {
     return descomprimido;
 }
 
-int main() {
-
-    // Leer el archivo entrada.txt
-    std::ifstream file("entrada.txt");
-    if (!file) {
-        std::cerr << "No se pudo abrir el archivo entrada.txt\n";
-        return 1;
+// Función para leer el archivo de entrada
+std::string LeerArchivo(const std::string& nombreArchivo) {
+    std::ifstream archivo(nombreArchivo, std::ios::binary);
+    if (!archivo.is_open()) {
+        std::cerr << "No se pudo abrir el archivo: " << nombreArchivo << std::endl;
+        exit(1);
     }
+    std::string contenido((std::istreambuf_iterator<char>(archivo)), std::istreambuf_iterator<char>());
+    archivo.close();
+    return contenido;
+}
 
-    std::string dataset((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+// Función para escribir el archivo comprimido en formato binario
+void EscribirArchivoComprimido(const std::string& nombreArchivo, const std::vector<ParLZ>& comprimido) {
+    std::ofstream archivo(nombreArchivo, std::ios::binary);
+    if (!archivo.is_open()) {
+        std::cerr << "No se pudo escribir el archivo: " << nombreArchivo << std::endl;
+        exit(1);
+    }
+    for (const auto& par : comprimido) {
+        archivo.write(reinterpret_cast<const char*>(&par.pos), sizeof(par.pos));
+        archivo.write(reinterpret_cast<const char*>(&par.lon), sizeof(par.lon));
+        archivo.write(&par.sigchar, sizeof(par.sigchar));
+    }
+    archivo.close();
+}
+
+// Función para leer el archivo comprimido en formato binario
+std::vector<ParLZ> LeerArchivoComprimido(const std::string& nombreArchivo) {
+    std::ifstream archivo(nombreArchivo, std::ios::binary);
+    if (!archivo.is_open()) {
+        std::cerr << "No se pudo abrir el archivo comprimido: " << nombreArchivo << std::endl;
+        exit(1);
+    }
+    std::vector<ParLZ> comprimido;
+    while (archivo.peek() != EOF) {
+        uint16_t pos, lon;
+        char sigchar;
+        archivo.read(reinterpret_cast<char*>(&pos), sizeof(pos));
+        archivo.read(reinterpret_cast<char*>(&lon), sizeof(lon));
+        archivo.read(&sigchar, sizeof(sigchar));
+        if (archivo) {
+            comprimido.emplace_back(pos, lon, sigchar);
+        }
+    }
+    archivo.close();
+    return comprimido;
+}
+
+// Función para escribir el archivo de texto descomprimido
+void EscribirArchivoTexto(const std::string& nombreArchivo, const std::string& contenido) {
+    std::ofstream archivo(nombreArchivo, std::ios::binary);
+    if (!archivo.is_open()) {
+        std::cerr << "No se pudo escribir el archivo: " << nombreArchivo << std::endl;
+        exit(1);
+    }
+    archivo.write(contenido.data(), contenido.size());
+    archivo.close();
+}
+
+int main() {
+    std::string nombreArchivoEntrada = "english1MB.txt";
+    std::string nombreArchivoSalida = "comprimido.bin";
+    std::string nombreArchivoDescomprimido = "descomprimido.txt";
+    
+    std::string texto = LeerArchivo(nombreArchivoEntrada);
 
     // Compresión LZ
     auto start = std::chrono::high_resolution_clock::now();
-    std::vector<ParLZ> ComprimidoLZ = CompresionLZ(dataset);
+    std::vector<ParLZ> ComprimidoLZ = CompresionLZ(texto);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> TiempoCompresionLZ = end - start;
 
+    std::cout << "Tiempo de Compresión LZ: " << TiempoCompresionLZ.count() << " s\n";
+    std::cout << "Tamaño de Archivo Original: " << texto.size() << " bytes\n";
+
+    // Escribir el archivo comprimido
+    EscribirArchivoComprimido(nombreArchivoSalida, ComprimidoLZ);
+    std::ifstream archivo_comprimido(nombreArchivoSalida, std::ios::binary | std::ios::ate);
+    std::cout << "Tamaño de Archivo Comprimido: " << archivo_comprimido.tellg() << " bytes\n";
+    archivo_comprimido.close();
+
+    // Leer archivo comprimido y descomprimir
+    std::vector<ParLZ> paresLZ = LeerArchivoComprimido(nombreArchivoSalida);
+
     start = std::chrono::high_resolution_clock::now();
-    std::string DescomprimidoLZ = DescompresionLZ(ComprimidoLZ);
+    std::string DescomprimidoLZ = DescompresionLZ(paresLZ);
     end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> TiempoDescompresionLZ = end - start;
 
-    std::cout << "Tiempo de Compresión LZ: " << TiempoCompresionLZ.count() << " s\n";
     std::cout << "Tiempo de Descompresión LZ: " << TiempoDescompresionLZ.count() << " s\n";
-    std::cout << "Tamaño de Compresión LZ: " << ComprimidoLZ.size() * sizeof(ParLZ) * 8 << " bits\n";
 
-    // Escribir el resultado descomprimido en descomprimido.txt
-    std::ofstream output("descomprimido.txt");
-    output << DescomprimidoLZ;
-    output.close();
-
+    // Escribir archivo descomprimido
+    EscribirArchivoTexto(nombreArchivoDescomprimido, DescomprimidoLZ);
     return 0;
 }
