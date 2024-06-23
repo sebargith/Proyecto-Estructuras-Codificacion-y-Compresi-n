@@ -2,8 +2,11 @@
 #include <queue>
 #include <unordered_map>
 #include <string>
+#include <fstream>
+#include <chrono>
 
 using namespace std;
+using namespace std::chrono;
 
 // Estructura para representar un nodo en el árbol Huffman
 struct NodoHuffman {
@@ -69,11 +72,11 @@ string codificarHuffman(string texto, unordered_map<char, string>& codigos) {
 }
 
 // Función para decodificar un string codificado usando el árbol de Huffman
-std::string decodificarHuffman(const std::string& stringCof, NodoHuffman* raiz) {
-    std::string stringDecof;
+string decodificarHuffman(const string& stringCodificado, NodoHuffman* raiz) {
+    string stringDecodificado;
     NodoHuffman* nodoActual = raiz;
     
-    for (char bit : stringCof) {
+    for (char bit : stringCodificado) {
         if (bit == '0') {
             nodoActual = nodoActual->izquierda;
         } else {
@@ -82,18 +85,31 @@ std::string decodificarHuffman(const std::string& stringCof, NodoHuffman* raiz) 
         
         // Si llegamos a un nodo hoja
         if (nodoActual->izquierda == nullptr && nodoActual->derecha == nullptr) {
-            stringDecof += nodoActual->caracter;
+            stringDecodificado += nodoActual->caracter;
             nodoActual = raiz;
         }
     }
     
-    return stringDecof;
+    return stringDecodificado;
+}
+
+// Función para liberar la memoria del árbol Huffman
+void liberarArbolHuffman(NodoHuffman* raiz) {
+    if (!raiz) return;
+    liberarArbolHuffman(raiz->izquierda);
+    liberarArbolHuffman(raiz->derecha);
+    delete raiz;
 }
 
 int main() {
-    string texto;
-    cout << "Ingrese texto: " << endl;
-    getline(cin, texto);
+    ifstream archivo("english1MB.txt");
+    if (!archivo) {
+        cerr << "No se pudo abrir el archivo." << endl;
+        return 1;
+    }
+
+    string texto((istreambuf_iterator<char>(archivo)), istreambuf_iterator<char>());
+    archivo.close();
 
     // Calcular frecuencia de cada carácter en el texto
     unordered_map<char, int> frecuencias;
@@ -108,12 +124,46 @@ int main() {
     unordered_map<char, string> codigos;
     generarCodigosHuffman(raiz, "", codigos);
 
-    // Codificar el texto usando los códigos de Huffman
-    string textoCodificado = codificarHuffman(texto, codigos);
+    // Imprimir los códigos de Huffman
+    cout << "Códigos de Huffman:\n";
+    for (auto par : codigos) {
+        cout << par.first << ": " << par.second << endl;
+    }
 
-    // Mostrar resultados
-    cout << "Texto original: " << texto << endl;
-    cout << "Texto codificado: " << textoCodificado << endl;
+    // Medir el tiempo de codificación
+    auto inicio = high_resolution_clock::now();
+    string textoCodificado = codificarHuffman(texto, codigos);
+    auto fin = high_resolution_clock::now();
+    auto duracion = duration_cast<milliseconds>(fin - inicio);
+
+    // Escribir el texto codificado en un archivo
+    ofstream archivoCodificado("textoCodificado.txt");
+    if (archivoCodificado) {
+        archivoCodificado << textoCodificado;
+        archivoCodificado.close();
+        cout << "Texto codificado guardado en 'textoCodificado.txt'" << endl;
+    } else {
+        cerr << "No se pudo crear el archivo de texto codificado." << endl;
+    }
+
+    // Decodificar el texto codificado
+    string textoDecodificado = decodificarHuffman(textoCodificado, raiz);
+
+    // Escribir el texto decodificado en un archivo
+    ofstream archivoDecodificado("textoDecodificado.txt");
+    if (archivoDecodificado) {
+        archivoDecodificado << textoDecodificado;
+        archivoDecodificado.close();
+        cout << "Texto decodificado guardado en 'textoDecodificado.txt'" << endl;
+    } else {
+        cerr << "No se pudo crear el archivo de texto decodificado." << endl;
+    }
+
+    // Mostrar el tiempo de codificación
+    cout << "Tiempo de codificación: " << duracion.count() << " ms" << endl;
+
+    // Liberar la memoria del árbol Huffman
+    liberarArbolHuffman(raiz);
 
     return 0;
 }
