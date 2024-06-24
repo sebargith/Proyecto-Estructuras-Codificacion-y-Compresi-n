@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <chrono>
+#include <bitset>
 
 using namespace std;
 using namespace std::chrono;
@@ -101,6 +102,30 @@ void liberarArbolHuffman(NodoHuffman* raiz) {
     delete raiz;
 }
 
+// Función para escribir los bits como bytes en un archivo binario
+void escribirBitsComoBytes(const string& bits, const string& nombreArchivo) {
+    ofstream archivoBinario(nombreArchivo, ios::binary);
+    if (!archivoBinario) {
+        cerr << "No se pudo crear el archivo binario." << endl;
+        return;
+    }
+
+    // Añadir ceros adicionales si no es múltiplo de 8
+    string bitsModificados = bits;
+    while (bitsModificados.size() % 8 != 0) {
+        bitsModificados += '0';
+    }
+
+    // Convertir los bits a bytes y escribir en el archivo
+    for (size_t i = 0; i < bitsModificados.size(); i += 8) {
+        bitset<8> byte(bitsModificados.substr(i, 8));
+        archivoBinario.put(static_cast<unsigned char>(byte.to_ulong()));
+    }
+
+    archivoBinario.close();
+    cout << "Texto codificado guardado en '" << nombreArchivo << "'" << endl;
+}
+
 int main() {
     ifstream archivo("english1MB.txt");
     if (!archivo) {
@@ -136,15 +161,8 @@ int main() {
     auto fin = high_resolution_clock::now();
     auto duracion = duration_cast<milliseconds>(fin - inicio);
 
-    // Escribir el texto codificado en un archivo
-    ofstream archivoCodificado("textoCodificado.txt");
-    if (archivoCodificado) {
-        archivoCodificado << textoCodificado;
-        archivoCodificado.close();
-        cout << "Texto codificado guardado en 'textoCodificado.txt'" << endl;
-    } else {
-        cerr << "No se pudo crear el archivo de texto codificado." << endl;
-    }
+    // Escribir el texto codificado en un archivo binario
+    escribirBitsComoBytes(textoCodificado, "textoCodificado.bin");
 
     // Decodificar el texto codificado
     string textoDecodificado = decodificarHuffman(textoCodificado, raiz);

@@ -118,8 +118,8 @@ void EscribirArchivoTexto(const std::string& nombreArchivo, const std::string& c
 
 int main() {
     std::string nombreArchivoEntrada = "english1MB.txt";
-    std::string nombreArchivoSalida = "comprimido.bin";
-    std::string nombreArchivoDescomprimido = "descomprimido.txt";
+    std::string nombreArchivoSalida = "textoComprimido.bin";
+    std::string nombreArchivoDescomprimido = "textoDescomprimido.txt";
     
     std::string texto = LeerArchivo(nombreArchivoEntrada);
 
