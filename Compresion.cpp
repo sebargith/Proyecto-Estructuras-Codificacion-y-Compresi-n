@@ -116,10 +116,24 @@ void EscribirArchivoTexto(const std::string& nombreArchivo, const std::string& c
     archivo.close();
 }
 
+// Función para escribir los pares LZ en un archivo de texto
+void EscribirParesLZ(const std::string& nombreArchivo, const std::vector<ParLZ>& comprimido) {
+    std::ofstream archivo(nombreArchivo);
+    if (!archivo.is_open()) {
+        std::cerr << "No se pudo escribir el archivo: " << nombreArchivo << std::endl;
+        exit(1);
+    }
+    for (const auto& par : comprimido) {
+        archivo << "Pos: " << par.pos << ", Lon: " << par.lon << ", SigChar: " << par.sigchar << "\n";
+    }
+    archivo.close();
+}
+
 int main() {
     std::string nombreArchivoEntrada = "english1MB.txt";
     std::string nombreArchivoSalida = "textoComprimido.bin";
     std::string nombreArchivoDescomprimido = "textoDescomprimido.txt";
+    std::string nombreArchivoParesLZ = "paresLZ.txt";
     
     std::string texto = LeerArchivo(nombreArchivoEntrada);
 
@@ -137,6 +151,9 @@ int main() {
     std::ifstream archivo_comprimido(nombreArchivoSalida, std::ios::binary | std::ios::ate);
     std::cout << "Tamaño de Archivo Comprimido: " << archivo_comprimido.tellg() << " bytes\n";
     archivo_comprimido.close();
+
+    // Escribir los pares LZ en un archivo de texto
+    EscribirParesLZ(nombreArchivoParesLZ, ComprimidoLZ);
 
     // Leer archivo comprimido y descomprimir
     std::vector<ParLZ> paresLZ = LeerArchivoComprimido(nombreArchivoSalida);
